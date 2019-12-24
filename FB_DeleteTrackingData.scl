@@ -1,0 +1,71 @@
+﻿FUNCTION_BLOCK "FB_DeleteTrackingData"
+{ S7_Optimized_Access := 'TRUE' }
+VERSION : 0.1
+   VAR_INPUT 
+      i_data : Int;
+   END_VAR
+
+   VAR_IN_OUT 
+      Conveyor : "UDT_Conveyor";   // The conveyor which is being tracked
+      TrackingControl : "UDT_Tracking";   // The tracking data for the conveyor
+      TrackingData : Variant;   // Variant array of int's that forms the tracking registers
+   END_VAR
+
+   VAR 
+      ExtractPos : Int;
+      I : Int;
+      WritePointer : Int;
+      TagatPoint : Int;
+      retVal : Int;
+      PositionPulses : Int;
+   END_VAR
+
+   VAR_TEMP 
+      t_TrackElement : Int;
+      t_Zero : Int;
+   END_VAR
+
+   VAR CONSTANT 
+      c_Zero : Int;
+   END_VAR
+
+
+BEGIN
+	REGION Title
+	(*
+	FB_DeleteTrackingData
+	This function a specific ID from tracking OR deletes all IDs from tracking.
+	This will unconditionally overwrite tracking data when called. This function does not validate track ID range.
+	
+	Version 0.0.1 - DRichardson 7/11/2019
+	Initial draft based upon FB_ExtractTrackingData
+	
+	*)
+	END_REGION
+	
+	//Sanity test some of the inputs
+	IF IS_ARRAY(#TrackingData) = FALSE OR TypeOfElements(#TrackingData) <> TypeOf(#TrackingControl.TagIn) THEN
+	    ENO := FALSE;
+	    #WritePointer := -1;
+	    RETURN;
+	END_IF;
+	
+	//Zero constant variable
+	#t_Zero := #c_Zero;
+	    
+	//Loop through the tracking data for conveyor length   
+	    FOR #I := 0 TO #TrackingControl.Length DO
+	        //Read the tracking data
+	        #retVal := MOVE_BLK_VARIANT(SRC := #TrackingData, COUNT := 1, DEST => #t_TrackElement, DEST_INDEX := 0, SRC_INDEX := #I);
+	        
+	        //IF the inout is negative then delete all tracking data
+	        //IF the inout is positive only delete that ID from tracking data
+	        IF #i_data < 0 OR (#i_data > 0 AND #t_TrackElement = #i_data) THEN
+	            #retVal := MOVE_BLK_VARIANT(SRC := #t_Zero, COUNT := 1, DEST => #TrackingData, DEST_INDEX := #I, SRC_INDEX := 0);
+	        END_IF;
+	            
+	    END_FOR;
+	    
+	
+END_FUNCTION_BLOCK
+
